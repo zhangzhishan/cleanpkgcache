@@ -1,0 +1,11 @@
+[package]
+name = "cleanpkgcache"
+version = "0.1.0"
+edition = "2021"
+authors = ["Package Cache Cleaner"]
+description = "CLI tool to clean package cache by keeping only the latest 2 versions of each package"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
