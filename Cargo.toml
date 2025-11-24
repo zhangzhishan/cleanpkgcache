@@ -1,6 +1,6 @@
 [package]
 name = "cleanpkgcache"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Package Cache Cleaner"]
 description = "CLI tool to clean package cache by keeping only the latest 2 versions of each package"

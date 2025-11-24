@@ -1,8 +1,15 @@
+use anyhow::{Context, Result};
 use clap::Parser;
-use anyhow::{Result, Context};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
+use std::time::{Duration, SystemTime};
+
+const ROO_TASK_PATHS: [&str; 2] = [
+    r"C:\Users\zhizha\AppData\Roaming\Code\User\globalStorage\microsoftai.ms-roo-cline\tasks",
+    r"C:\Users\zhizha\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\tasks",
+];
+const TWO_MONTHS_IN_SECONDS: u64 = 60 * 24 * 60 * 60;
 
 #[derive(Parser)]
 #[command(name = "cleanpkgcache")]
@@ -20,6 +27,10 @@ struct Args {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
+
+    /// Also clean Roo checkpoints older than 2 months
+    #[arg(long)]
+    clean_roo_checkpoints: bool,
 }
 
 fn main() -> Result<()> {
@@ -40,6 +51,10 @@ fn main() -> Result<()> {
     }
 
     clean_package_cache(&args.path, args.dry_run, args.verbose)?;
+
+    if args.clean_roo_checkpoints {
+        clean_roo_checkpoints(args.dry_run, args.verbose)?;
+    }
 
     Ok(())
 }
@@ -164,9 +179,79 @@ fn clean_package_cache(cache_path: &Path, dry_run: bool, verbose: bool) -> Resul
     Ok(())
 }
 
+fn clean_roo_checkpoints(dry_run: bool, verbose: bool) -> Result<()> {
+    let two_months = Duration::from_secs(TWO_MONTHS_IN_SECONDS);
+    let now = SystemTime::now();
+    let mut tasks_checked = 0;
+    let mut checkpoints_targets = 0;
+
+    println!("\nCleaning Roo checkpoints older than approximately 2 months...");
+
+    for base_path in ROO_TASK_PATHS {
+        let base_dir = Path::new(base_path);
+
+        if !base_dir.exists() {
+            if verbose {
+                println!("  Skipping {} (path not found)", base_dir.display());
+            }
+            continue;
+        }
+
+        for entry in fs::read_dir(base_dir)
+            .with_context(|| format!("Failed to read Roo tasks directory: {}", base_dir.display()))?
+        {
+            let entry = entry?;
+            let task_path = entry.path();
+
+            if !task_path.is_dir() {
+                continue;
+            }
+            tasks_checked += 1;
+
+            let metadata = fs::metadata(&task_path)
+                .with_context(|| format!("Failed to read metadata for task: {}", task_path.display()))?;
+            let modified = metadata.modified()
+                .with_context(|| format!("Failed to get modification time for task: {}", task_path.display()))?;
+            let age = now.duration_since(modified).unwrap_or(Duration::ZERO);
+
+            if age < two_months {
+                if verbose {
+                    println!("  Keeping checkpoints for {} (age < 2 months)", task_path.display());
+                }
+                continue;
+            }
+
+            let checkpoints_path = task_path.join("checkpoints");
+            if !checkpoints_path.exists() {
+                continue;
+            }
+
+            if dry_run {
+                println!("  Would delete checkpoints: {}", checkpoints_path.display());
+            } else {
+                println!("  Deleting checkpoints: {}", checkpoints_path.display());
+                fs::remove_dir_all(&checkpoints_path).with_context(|| {
+                    format!("Failed to delete checkpoints directory: {}", checkpoints_path.display())
+                })?;
+            }
+            checkpoints_targets += 1;
+        }
+    }
+
+    println!("Roo checkpoints summary:");
+    println!("  Task folders inspected: {}", tasks_checked);
+    if dry_run {
+        println!("  Checkpoints eligible for deletion: {}", checkpoints_targets);
+    } else {
+        println!("  Checkpoints deleted: {}", checkpoints_targets);
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 struct PackageVersion {
     name: String,
     path: PathBuf,
-    modified: std::time::SystemTime,
+    modified: SystemTime,
 }

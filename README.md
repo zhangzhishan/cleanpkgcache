@@ -12,6 +12,7 @@ This tool is designed to clean package cache folders where each subfolder repres
 - **Dry Run Mode**: Preview what would be deleted without actually deleting files
 - **Verbose Output**: Detailed information about packages and versions found
 - **Safe Deletion**: Only removes directories that are clearly version folders within package directories
+- **Roo Checkpoint Cleanup**: Optional flag to remove outdated MS Roo Code task checkpoints (older than ~2 months)
 - **Summary Report**: Shows how many packages were processed and versions kept/deleted
 
 ## Installation
@@ -46,6 +47,9 @@ cleanpkgcache.exe --verbose
 
 # Combine options
 cleanpkgcache.exe --dry-run --verbose "C:\Your\Cache\Path"
+
+# Include Roo checkpoint cleanup
+cleanpkgcache.exe --clean-roo-checkpoints --dry-run
 ```
 
 ### Command Line Arguments
@@ -53,6 +57,7 @@ cleanpkgcache.exe --dry-run --verbose "C:\Your\Cache\Path"
 - `PATH` - Path to the package cache directory (optional, defaults to `C:\PkgCache\VC17LTCG`)
 - `-d, --dry-run` - Show what would be deleted without actually deleting
 - `-v, --verbose` - Show detailed output about packages and versions
+- `--clean-roo-checkpoints` - Also clean checkpoints under the MS Roo Code and Roo Code Extension `tasks` folders that are older than ~2 months
 - `-h, --help` - Show help information
 - `-V, --version` - Show version information
 
@@ -87,6 +92,7 @@ Summary:
 3. **Sorting**: Versions are sorted by modification time (newest first)
 4. **Cleanup**: Keeps the 2 most recent versions and deletes the rest
 5. **Reporting**: Provides a summary of the cleanup operation
+6. **Optional Roo Cleanup**: When `--clean-roo-checkpoints` is passed, the tool also scans `C:\Users\zhizha\AppData\Roaming\Code\User\globalStorage\microsoftai.ms-roo-cline\tasks` and `C:\Users\zhizha\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\tasks`, deleting `checkpoints` folders for tasks older than roughly two months
 
 ## Safety Features
 
