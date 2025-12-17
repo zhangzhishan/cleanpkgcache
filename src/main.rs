@@ -14,7 +14,7 @@ const TWO_MONTHS_IN_SECONDS: u64 = 60 * 24 * 60 * 60;
 #[derive(Parser)]
 #[command(name = "cleanpkgcache")]
 #[command(about = "Clean package cache by keeping only the latest 2 versions of each package")]
-#[command(version = "0.1.0")]
+#[command(version = "0.2.1")]
 struct Args {
     /// Path to the package cache directory
     #[arg(default_value = r"C:\PkgCache\VC17LTCG")]
@@ -36,21 +36,25 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if !args.path.exists() {
-        anyhow::bail!("Path does not exist: {}", args.path.display());
-    }
-
-    if !args.path.is_dir() {
-        anyhow::bail!("Path is not a directory: {}", args.path.display());
-    }
-
-    println!("Cleaning package cache at: {}", args.path.display());
-
     if args.dry_run {
         println!("DRY RUN MODE - No files will be deleted");
     }
 
-    clean_package_cache(&args.path, args.dry_run, args.verbose)?;
+    // Only clean package cache if path exists or if not running roo-only mode
+    let should_clean_packages = args.path.exists() && args.path.is_dir();
+
+    if should_clean_packages {
+        println!("Cleaning package cache at: {}", args.path.display());
+        clean_package_cache(&args.path, args.dry_run, args.verbose)?;
+    } else if !args.clean_roo_checkpoints {
+        // Only error out if we're not cleaning roo checkpoints either
+        if !args.path.exists() {
+            anyhow::bail!("Path does not exist: {}", args.path.display());
+        }
+        if !args.path.is_dir() {
+            anyhow::bail!("Path is not a directory: {}", args.path.display());
+        }
+    }
 
     if args.clean_roo_checkpoints {
         clean_roo_checkpoints(args.dry_run, args.verbose)?;
